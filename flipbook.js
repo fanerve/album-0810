@@ -31,6 +31,21 @@ const pageFlip = new St.PageFlip(bookElement, {
   disableFlipByClick: false,
 });
 
+
+// 翻到某页时, 提前把相邻几页的图拉起来(懒加载下避免翻页空白)
+const preloadAround = (page) => {
+  const from = Math.max(0, page - 1);
+  const to = Math.min(pages.length - 1, page + 4);
+  for (let i = from; i <= to; i += 1) {
+    const img = pages[i].querySelector("img");
+    if (img && !img.complete) {
+      img.loading = "eager";
+      const warm = new Image();
+      warm.src = img.currentSrc || img.src;
+    }
+  }
+};
+
 let currentPage = 0;
 let isTurning = false;
 
@@ -54,6 +69,7 @@ function updateControls() {
 pageFlip.on("flip", (event) => {
   currentPage = Number(event.data);
   updateControls();
+  preloadAround(currentPage);
 });
 
 pageFlip.on("changeState", (event) => {
@@ -71,6 +87,7 @@ pageFlip.on("changeOrientation", (event) => updateOrientation(event.data));
 
 pageFlip.loadFromHTML(pages);
 updateControls();
+preloadAround(0);
 
 const requestedPage = Number(new URLSearchParams(location.search).get("page"));
 if (Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage < pages.length) {
